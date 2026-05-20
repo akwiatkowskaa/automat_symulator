@@ -1,4 +1,4 @@
-# Symulator automatu (Systemy operacyjne)
+# Symulator automatu 
 
 - **fork** + **pipe** (klient ↔ proces automatu)
 - **SIGINT** (Ctrl+C) — grzeczne zamknięcie
