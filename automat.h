@@ -1,8 +1,11 @@
 #ifndef AUTOMAT_H
 #define AUTOMAT_H
 
-#define NAPOJOW 6
+#define PRODUKTOW 10
+#define SLOTOW_NAPOJE 5 /* 1–5 napoje, 6–10 przekaski */
 #define MAX_STAN_MAG 8
+#define SALDO_KARTY_DOMYSLNE 200.0
+#define PLIK_STANU "automat_stan.dat"
 
 enum {
 	CMD_QUIT = 0,
@@ -11,22 +14,28 @@ enum {
 	CMD_BUY = 3,
 	CMD_CHANGE = 4,
 	CMD_RESTOCK = 5,
+	CMD_BUY_CARD = 6,
+	CMD_PICKUP = 7,
+	CMD_CARD_TOPUP = 8,
+	CMD_RESTOCK_FILL = 9,
 };
 
 typedef struct {
 	char nazwa[36];
 	double cena_pln;
 	int stan;
-} NapojInfo;
+} ProduktInfo;
 
 typedef struct {
 	double saldo_pln;
-	NapojInfo napoje[NAPOJOW];
+	double saldo_karty_pln;
+	int oczekuje_odbioru;
+	ProduktInfo produkty[PRODUKTOW];
 } AutomatStan;
 
 typedef struct {
 	int cmd;
-	int arg; /* numer napoju 1..NAPOJOW (BUY, RESTOCK jednego) */
+	int arg;
 	double kwota_pln;
 } AutomatReq;
 

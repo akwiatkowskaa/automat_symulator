@@ -39,23 +39,52 @@ static void ramka(int y, int x, int h, int w)
 	mvvline(y + 1, x + w - 1, ACS_VLINE, h - 2);
 }
 
+static void wypisz_komunikat(int y, int x, int szer_box, const char *tekst,
+			     int ok)
+{
+	int n = szer_box - 6;
+	if (n < 10)
+		n = 10;
+	for (int i = 0; i < n; i++)
+		mvaddch(y, x + 2 + i, ' ');
+	color_set(ok ? 3 : 4, NULL);
+	if (tekst && tekst[0])
+		mvprintw(y, x + 2, "%.*s", n, tekst);
+	else
+		mvprintw(y, x + 2, "(czekam na akcje...)");
+	color_set(2, NULL);
+}
+
 static void rysuj_panel(const AutomatResp *resp, int wybor, pid_t pid_aut,
-			int tryb_wlasna_kwota, const char *bufor_kwoty)
+			int tryb_wlasna_kwota, const char *bufor_kwoty,
+			int tryb_doladowanie, const char *bufor_doladowanie)
 {
 	const AutomatStan *s = &resp->stan;
 	int wys, szer;
 	getmaxyx(stdscr, wys, szer);
+	int odbior = s->oczekuje_odbioru;
 
 	clear();
 	color_set(1, NULL);
-	mvprintw(0, 2, " AUTOMAT Z NAPOJAMI ");
+	mvprintw(0, 2, " AUTOMAT: NAPOJE + PRZEKASKI ");
 	color_set(2, NULL);
-	mvprintw(1, 2, " Klient PID %-6d | Automat PID %-6d | pipe + fork ",
-		 (int)getpid(), (int)pid_aut);
+	mvprintw(1, 2, " Klient PID %-6d | Automat PID %-6d | zapis: %s ",
+		 (int)getpid(), (int)pid_aut, PLIK_STANU);
 
 	attron(A_BOLD);
-	mvprintw(3, 2, " SALDO: %6.2f zl ", s->saldo_pln);
+	mvprintw(3, 2, " GOTOWKA: %6.2f zl  |  KARTA: %7.2f zl ",
+		 s->saldo_pln, s->saldo_karty_pln);
 	attroff(A_BOLD);
+
+	if (odbior > 0) {
+		color_set(3, NULL);
+		attron(A_BLINK);
+		mvprintw(4, 2,
+			 " >>> ODEBIERZ NAPOJ ZE SLOTU [%d] — Enter / o <<< ",
+			 odbior);
+		attroff(A_BLINK);
+		color_set(2, NULL);
+	}
 
 	int box_w = szer - 4;
 	if (box_w > 72)
@@ -64,51 +93,65 @@ static void rysuj_panel(const AutomatResp *resp, int wybor, pid_t pid_aut,
 	if (box_x < 1)
 		box_x = 1;
 
-	ramka(5, box_x, NAPOJOW + 2, box_w);
-	mvprintw(5, box_x + 2, " NAPOJE (strzalki / 1-%d) ", NAPOJOW);
+	ramka(6, box_x, PRODUKTOW + 2, box_w);
+	mvprintw(6, box_x + 2,
+		 " 1-5 NAPOJE | 6-10 PRZEKASKI (max %d szt./slot) ", MAX_STAN_MAG);
 
-	for (int i = 0; i < NAPOJOW; i++) {
-		int y = 6 + i;
-		const NapojInfo *n = &s->napoje[i];
-		int zaznacz = (i + 1 == wybor);
+	for (int i = 0; i < PRODUKTOW; i++) {
+		int y = 7 + i;
+		const ProduktInfo *n = &s->produkty[i];
+		int nr = i + 1;
+		int zaznacz = (nr == wybor);
+		int slot_odbioru = (odbior == nr);
 
-		if (zaznacz)
+		if (slot_odbioru)
+			attron(A_BOLD | COLOR_PAIR(3));
+		else if (zaznacz && !odbior)
 			attron(A_REVERSE | A_BOLD);
 		else if (n->stan <= 0)
 			attron(A_DIM);
 
-		mvprintw(y, box_x + 2, "[%d] %-22s %5.2f zl  stan:%2d",
-			 i + 1, n->nazwa, n->cena_pln, n->stan);
+		mvprintw(y, box_x + 2, "[%d] %-22s %5.2f zl  %2d/%d",
+			 nr, n->nazwa, n->cena_pln, n->stan, MAX_STAN_MAG);
 
-		if (n->stan <= 0 && !zaznacz)
+		if (slot_odbioru)
+			addstr("  <<ODBIOR>>");
+		else if (n->stan <= 0 && !zaznacz)
 			addstr("  (brak)");
-		if (zaznacz)
+		else if (zaznacz && !odbior)
 			addstr("  <<");
 
-		if (zaznacz)
+		if (slot_odbioru)
+			attroff(A_BOLD | COLOR_PAIR(3));
+		else if (zaznacz && !odbior)
 			attroff(A_REVERSE | A_BOLD);
 		else if (n->stan <= 0)
 			attroff(A_DIM);
 	}
 
-	int msg_y = 6 + NAPOJOW + 1;
-	ramka(msg_y, box_x, 4, box_w);
+	int msg_y = 7 + PRODUKTOW + 1;
+	ramka(msg_y, box_x, 5, box_w);
 	mvprintw(msg_y, box_x + 2, " KOMUNIKAT ");
-	color_set(resp->ok ? 3 : 4, NULL);
-	mvprintw(msg_y + 1, box_x + 2, " %-*.s ", box_w - 6,
-		 resp->text[0] ? resp->text : " ");
-	color_set(2, NULL);
+	wypisz_komunikat(msg_y + 2, box_x, box_w, resp->text, resp->ok);
 
-	if (tryb_wlasna_kwota) {
+	if (tryb_doladowanie) {
 		mvprintw(wys - 2, 2,
-			 " Kwota (zl) + Enter | Esc = anuluj: [%s]",
+			 " Doladuj karte (zl) + Enter | Esc = anuluj: [%s]",
+			 bufor_doladowanie);
+	} else if (tryb_wlasna_kwota) {
+		mvprintw(wys - 2, 2,
+			 " Kwota gotowki (zl) + Enter | Esc = anuluj: [%s]",
 			 bufor_kwoty);
+	} else if (odbior > 0) {
+		mvprintw(wys - 2, 2,
+			 " Enter / o = odbior  |  q = wyjscie (stan sie zapisze) ");
 	} else {
 		mvprintw(wys - 3, 2,
-			 " z/x/v = 1/2/5 zl | Enter/k = kup | r = reszta | "
-			 "u = uzupelnij | c = inna kwota | q = wyjscie ");
+			 " z/x/v gotowka | Enter/k kup | p karta | r reszta | "
+			 "l doladuj karte ");
 		mvprintw(wys - 2, 2,
-			 " strzalki lub 1-%d = wybor napoju ", NAPOJOW);
+			 " u +1 szt. wybrany | U pelny slot | c inna kwota | q "
+			 "wyjscie ");
 	}
 
 	refresh();
@@ -139,10 +182,13 @@ int klient_run(int fd_do_automatu, int fd_od_automatu, pid_t pid_automatu)
 
 	int wybor = 1;
 	int tryb_kwota = 0;
+	int tryb_doladowanie = 0;
 	char bufor_kwoty[32] = "";
+	char bufor_doladowanie[32] = "";
 	resp.ok = 1;
 	snprintf(resp.text, sizeof(resp.text),
-		 "Witaj! Wrzuc monety (z/x/v) i kup napoj (Enter).");
+		 "Karta start: %.0f zl. Platnosc: p. Doladowanie: l.",
+		 SALDO_KARTY_DOMYSLNE);
 
 	for (;;) {
 		if (przerwano) {
@@ -152,8 +198,47 @@ int klient_run(int fd_do_automatu, int fd_od_automatu, pid_t pid_automatu)
 			break;
 		}
 
-		rysuj_panel(&resp, wybor, pid_automatu, tryb_kwota, bufor_kwoty);
+		int odbior = resp.stan.oczekuje_odbioru;
+		rysuj_panel(&resp, wybor, pid_automatu, tryb_kwota, bufor_kwoty,
+			    tryb_doladowanie, bufor_doladowanie);
 		int ch = getch();
+
+		if (tryb_doladowanie) {
+			if (ch == 27) {
+				tryb_doladowanie = 0;
+				bufor_doladowanie[0] = '\0';
+				snprintf(resp.text, sizeof(resp.text),
+					 "Anulowano doladowanie karty.");
+				resp.ok = 1;
+				continue;
+			}
+			if (ch == '\n' || ch == KEY_ENTER) {
+				req.cmd = CMD_CARD_TOPUP;
+				req.kwota_pln = strtod(bufor_doladowanie, NULL);
+				if (wyslij(fd_do_automatu, fd_od_automatu, &req,
+					   &resp) != 0)
+					break;
+				tryb_doladowanie = 0;
+				bufor_doladowanie[0] = '\0';
+				continue;
+			}
+			if (ch == KEY_BACKSPACE || ch == 127 || ch == '\b') {
+				size_t len = strlen(bufor_doladowanie);
+				if (len > 0)
+					bufor_doladowanie[len - 1] = '\0';
+				continue;
+			}
+			if ((ch >= '0' && ch <= '9') || ch == '.' || ch == ',') {
+				size_t len = strlen(bufor_doladowanie);
+				if (len < sizeof(bufor_doladowanie) - 2) {
+					bufor_doladowanie[len] =
+					    (char)((ch == ',') ? '.' : ch);
+					bufor_doladowanie[len + 1] = '\0';
+				}
+				continue;
+			}
+			continue;
+		}
 
 		if (tryb_kwota) {
 			if (ch == 27) {
@@ -165,9 +250,8 @@ int klient_run(int fd_do_automatu, int fd_od_automatu, pid_t pid_automatu)
 				continue;
 			}
 			if (ch == '\n' || ch == KEY_ENTER) {
-				double kw = strtod(bufor_kwoty, NULL);
 				req.cmd = CMD_COIN;
-				req.kwota_pln = kw;
+				req.kwota_pln = strtod(bufor_kwoty, NULL);
 				if (wyslij(fd_do_automatu, fd_od_automatu, &req,
 					   &resp) != 0)
 					break;
@@ -193,6 +277,28 @@ int klient_run(int fd_do_automatu, int fd_od_automatu, pid_t pid_automatu)
 			continue;
 		}
 
+		if (odbior > 0) {
+			if (ch == '\n' || ch == KEY_ENTER || ch == 'o' ||
+			    ch == 'O') {
+				req.cmd = CMD_PICKUP;
+				if (wyslij(fd_do_automatu, fd_od_automatu, &req,
+					   &resp) != 0)
+					break;
+				continue;
+			}
+			if (ch == 'q' || ch == 'Q') {
+				req.cmd = CMD_QUIT;
+				if (wyslij(fd_do_automatu, fd_od_automatu, &req,
+					   &resp) != 0)
+					break;
+				break;
+			}
+			snprintf(resp.text, sizeof(resp.text),
+				 "Najpierw odbierz napoj (Enter).");
+			resp.ok = 0;
+			continue;
+		}
+
 		if (ch == 'q' || ch == 'Q') {
 			req.cmd = CMD_QUIT;
 			if (wyslij(fd_do_automatu, fd_od_automatu, &req, &resp) != 0)
@@ -202,16 +308,16 @@ int klient_run(int fd_do_automatu, int fd_od_automatu, pid_t pid_automatu)
 		if (ch == KEY_UP) {
 			wybor--;
 			if (wybor < 1)
-				wybor = NAPOJOW;
+				wybor = PRODUKTOW;
 			continue;
 		}
 		if (ch == KEY_DOWN) {
 			wybor++;
-			if (wybor > NAPOJOW)
+			if (wybor > PRODUKTOW)
 				wybor = 1;
 			continue;
 		}
-		if (ch >= '1' && ch <= '0' + NAPOJOW && ch != '\n') {
+		if (ch >= '1' && ch <= '0' + PRODUKTOW) {
 			wybor = ch - '0';
 			continue;
 		}
@@ -220,6 +326,18 @@ int klient_run(int fd_do_automatu, int fd_od_automatu, pid_t pid_automatu)
 			req.arg = wybor;
 			if (wyslij(fd_do_automatu, fd_od_automatu, &req, &resp) != 0)
 				break;
+			continue;
+		}
+		if (ch == 'p' || ch == 'P') {
+			req.cmd = CMD_BUY_CARD;
+			req.arg = wybor;
+			if (wyslij(fd_do_automatu, fd_od_automatu, &req, &resp) != 0)
+				break;
+			continue;
+		}
+		if (ch == 'l' || ch == 'L') {
+			tryb_doladowanie = 1;
+			bufor_doladowanie[0] = '\0';
 			continue;
 		}
 		if (ch == 'z' || ch == 'Z') {
@@ -249,9 +367,16 @@ int klient_run(int fd_do_automatu, int fd_od_automatu, pid_t pid_automatu)
 				break;
 			continue;
 		}
-		if (ch == 'u' || ch == 'U') {
+		if (ch == 'u') {
 			req.cmd = CMD_RESTOCK;
-			req.arg = 0;
+			req.arg = wybor;
+			if (wyslij(fd_do_automatu, fd_od_automatu, &req, &resp) != 0)
+				break;
+			continue;
+		}
+		if (ch == 'U') {
+			req.cmd = CMD_RESTOCK_FILL;
+			req.arg = wybor;
 			if (wyslij(fd_do_automatu, fd_od_automatu, &req, &resp) != 0)
 				break;
 			continue;
@@ -262,7 +387,7 @@ int klient_run(int fd_do_automatu, int fd_od_automatu, pid_t pid_automatu)
 			continue;
 		}
 		snprintf(resp.text, sizeof(resp.text),
-			 "Nieznany klawisz (pomoc na dole ekranu).");
+			 "Nieznany klawisz — pomoc na dole ekranu.");
 		resp.ok = 0;
 	}
 
