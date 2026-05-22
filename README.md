@@ -1,4 +1,4 @@
-# Symulator automatu (Systemy operacyjne)
+# Symulator automatu 
 
 Symulator automatu z napojami i przekąskami: **fork**, **pipe**, **SIGINT**, interfejs **ncurses**.
 
@@ -9,35 +9,38 @@ make
 ./automat
 ```
 
-Terminal ok. 80×24. Uruchamiaj z katalogu `automat_symulator` (tam powstaje plik stanu).
 
 ## Asortyment (10 slotów)
 
 | Nr | Typ | Produkt |
 |----|-----|---------|
-| 1 | napój | Cola 330 ml |
+| 1 | napój | Coca-cola |
 | 2 | napój | Woda niegazowana |
-| 3 | napój | Sok pomarańczowy |
-| 4 | napój | Energetyk |
-| 5 | napój | Herbata mrożona |
+| 3 | napój | Woda gazowana |
+| 4 | napój | Sok pomarańczowy |
+| 5 | napój | Ice tea |
 | 6 | przekąska | Paluszki solone |
-| 7 | przekąska | Baton czekoladowy |
-| 8 | przekąska | Chipsy paprykowe |
+| 7 | przekąska | Żelki owocowe |
+| 8 | przekąska | Chipsy |
 | 9 | przekąska | Orzeszki solone |
 | 10 | przekąska | Baton musli |
 
+U góry ekranu widać oba salda: **GOTOWKA** i **KARTA**.
+
 ## Płatności
 
-### Gotówka
-- **z / x / v** — wrzut 1 / 2 / 5 zł
-- **c** — inna kwota
-- **Enter / k** — zakup ze salda gotówki
-- **r** — wydaj resztę
+### Gotówka (saldo rośnie i maleje)
+- **z / x / v** — wrzut 1 / 2 / 5 zł → **saldo gotówki rośnie**
+- **c** — inna kwota (wrzut)
+- **Enter / k** — zakup: cena **odejmuje się** z salda gotówki (jak przy karcie)
+- **r** — wydaj całą resztę (saldo gotówki → 0)
 
-### Karta (portfel, nie limit jednej transakcji)
+Start: gotówka **0 zł** (dopiero po wrzucie monet masz środki).
+
+### Karta (saldo portfela)
 - Start: **200 zł** na karcie (albo kwota z pliku po ponownym uruchomieniu).
 - **p** — płatność kartą: cena **odejmuje się** z salda karty.
-- **l** — doładuj kartę (wpisz kwotę, Enter).
+- **l** — doładuj kartę (wpisz kwotę, Enter) → saldo karty **rośnie**.
 
 ## Odbiór produktu
 
@@ -53,12 +56,6 @@ Po udanym zakupie (gotówka lub karta) automat wymaga **odbioru**:
 - **U** — uzupełnij **wybrany** slot do pełna (8 szt.).
 
 ## Zapis stanu — `automat_stan.dat`
-
-### Dlaczego wcześniej wszystko znikało?
-
-Stan był tylko w **pamięci procesu potomka** (logika automatu po `fork`). Po **q** proces się kończył → przy ponownym `./automat` program startował od zera.
-
-### Jak jest teraz?
 
 Po zakupie, wrzucie, uzupełnieniu, odbiorze i przy wyjściu (**q**) stan jest zapisywany do pliku:
 
@@ -82,10 +79,6 @@ rm automat_stan.dat
 ```
 
 Dostaniesz domyślny magazyn (5 napojów + 5 przekąsek) i kartę z **200 zł**.
-
-> Stary plik z wersji 6 produktów nie pasuje do nowego formatu (10 slotów) — wtedy też wczytywany jest stan domyślny. Po pierwszym zapisie powstaje nowy `automat_stan.dat`.
-
-Plik jest w `.gitignore` — nie trafia na GitHub (stan u Ciebie lokalnie).
 
 ## Sterowanie
 

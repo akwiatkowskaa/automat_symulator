@@ -57,7 +57,8 @@ static void wypisz_komunikat(int y, int x, int szer_box, const char *tekst,
 
 static void rysuj_panel(const AutomatResp *resp, int wybor, pid_t pid_aut,
 			int tryb_wlasna_kwota, const char *bufor_kwoty,
-			int tryb_doladowanie, const char *bufor_doladowanie)
+			int tryb_doladowanie, const char *bufor_doladowanie,
+			int tryb_portfel, const char *bufor_portfel)
 {
 	const AutomatStan *s = &resp->stan;
 	int wys, szer;
@@ -72,15 +73,15 @@ static void rysuj_panel(const AutomatResp *resp, int wybor, pid_t pid_aut,
 		 (int)getpid(), (int)pid_aut, PLIK_STANU);
 
 	attron(A_BOLD);
-	mvprintw(3, 2, " GOTOWKA: %6.2f zl  |  KARTA: %7.2f zl ",
-		 s->saldo_pln, s->saldo_karty_pln);
+	mvprintw(3, 2, " W automacie: %5.2f zl | Portfel: %5.2f zl | Karta: %6.2f zl ",
+		 s->saldo_pln, s->portfel_gotowki_pln, s->saldo_karty_pln);
 	attroff(A_BOLD);
 
 	if (odbior > 0) {
 		color_set(3, NULL);
 		attron(A_BLINK);
 		mvprintw(4, 2,
-			 " >>> ODEBIERZ NAPOJ ZE SLOTU [%d] — Enter / o <<< ",
+			 " >>> ODEBIERZ PRODUKT ZE SLOTU [%d] — Enter / o <<< ",
 			 odbior);
 		attroff(A_BLINK);
 		color_set(2, NULL);
@@ -134,7 +135,11 @@ static void rysuj_panel(const AutomatResp *resp, int wybor, pid_t pid_aut,
 	mvprintw(msg_y, box_x + 2, " KOMUNIKAT ");
 	wypisz_komunikat(msg_y + 2, box_x, box_w, resp->text, resp->ok);
 
-	if (tryb_doladowanie) {
+	if (tryb_portfel) {
+		mvprintw(wys - 2, 2,
+			 " Doladuj portfel gotowki (zl) + Enter | Esc = anuluj: [%s]",
+			 bufor_portfel);
+	} else if (tryb_doladowanie) {
 		mvprintw(wys - 2, 2,
 			 " Doladuj karte (zl) + Enter | Esc = anuluj: [%s]",
 			 bufor_doladowanie);
@@ -147,11 +152,9 @@ static void rysuj_panel(const AutomatResp *resp, int wybor, pid_t pid_aut,
 			 " Enter / o = odbior  |  q = wyjscie (stan sie zapisze) ");
 	} else {
 		mvprintw(wys - 3, 2,
-			 " z/x/v gotowka | Enter/k kup | p karta | r reszta | "
-			 "l doladuj karte ");
+			 " z/x/v/c - wrzut z portfela | Enter/k - kup | p - karta | r - reszta do portfela | l/g - doladuj ");
 		mvprintw(wys - 2, 2,
-			 " u +1 szt. wybrany | U pelny slot | c inna kwota | q "
-			 "wyjscie ");
+			 " u/U - uzupelnij slot | q - wyjscie | 1-10 wybor ");
 	}
 
 	refresh();
@@ -183,12 +186,14 @@ int klient_run(int fd_do_automatu, int fd_od_automatu, pid_t pid_automatu)
 	int wybor = 1;
 	int tryb_kwota = 0;
 	int tryb_doladowanie = 0;
+	int tryb_portfel = 0;
 	char bufor_kwoty[32] = "";
 	char bufor_doladowanie[32] = "";
+	char bufor_portfel[32] = "";
 	resp.ok = 1;
 	snprintf(resp.text, sizeof(resp.text),
-		 "Karta start: %.0f zl. Platnosc: p. Doladowanie: l.",
-		 SALDO_KARTY_DOMYSLNE);
+		 "Portfel %.0f zl do wrzucenia. z/x/v/c = wrzut z portfela.",
+		 PORTFEL_GOTOWKI_DOMYSLNE);
 
 	for (;;) {
 		if (przerwano) {
@@ -200,8 +205,46 @@ int klient_run(int fd_do_automatu, int fd_od_automatu, pid_t pid_automatu)
 
 		int odbior = resp.stan.oczekuje_odbioru;
 		rysuj_panel(&resp, wybor, pid_automatu, tryb_kwota, bufor_kwoty,
-			    tryb_doladowanie, bufor_doladowanie);
+			    tryb_doladowanie, bufor_doladowanie, tryb_portfel,
+			    bufor_portfel);
 		int ch = getch();
+
+		if (tryb_portfel) {
+			if (ch == 27) {
+				tryb_portfel = 0;
+				bufor_portfel[0] = '\0';
+				snprintf(resp.text, sizeof(resp.text),
+					 "Anulowano doladowanie portfela.");
+				resp.ok = 1;
+				continue;
+			}
+			if (ch == '\n' || ch == KEY_ENTER) {
+				req.cmd = CMD_PORTFEL_TOPUP;
+				req.kwota_pln = strtod(bufor_portfel, NULL);
+				if (wyslij(fd_do_automatu, fd_od_automatu, &req,
+					   &resp) != 0)
+					break;
+				tryb_portfel = 0;
+				bufor_portfel[0] = '\0';
+				continue;
+			}
+			if (ch == KEY_BACKSPACE || ch == 127 || ch == '\b') {
+				size_t len = strlen(bufor_portfel);
+				if (len > 0)
+					bufor_portfel[len - 1] = '\0';
+				continue;
+			}
+			if ((ch >= '0' && ch <= '9') || ch == '.' || ch == ',') {
+				size_t len = strlen(bufor_portfel);
+				if (len < sizeof(bufor_portfel) - 2) {
+					bufor_portfel[len] =
+					    (char)((ch == ',') ? '.' : ch);
+					bufor_portfel[len + 1] = '\0';
+				}
+				continue;
+			}
+			continue;
+		}
 
 		if (tryb_doladowanie) {
 			if (ch == 27) {
@@ -294,7 +337,7 @@ int klient_run(int fd_do_automatu, int fd_od_automatu, pid_t pid_automatu)
 				break;
 			}
 			snprintf(resp.text, sizeof(resp.text),
-				 "Najpierw odbierz napoj (Enter).");
+				 "Najpierw odbierz produkt (Enter).");
 			resp.ok = 0;
 			continue;
 		}
@@ -338,6 +381,11 @@ int klient_run(int fd_do_automatu, int fd_od_automatu, pid_t pid_automatu)
 		if (ch == 'l' || ch == 'L') {
 			tryb_doladowanie = 1;
 			bufor_doladowanie[0] = '\0';
+			continue;
+		}
+		if (ch == 'g' || ch == 'G') {
+			tryb_portfel = 1;
+			bufor_portfel[0] = '\0';
 			continue;
 		}
 		if (ch == 'z' || ch == 'Z') {
