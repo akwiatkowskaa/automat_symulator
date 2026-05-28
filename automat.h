@@ -5,7 +5,7 @@
 #define SLOTOW_NAPOJE 5
 #define MAX_STAN_MAG 8
 #define SALDO_KARTY_DOMYSLNE 200.0
-#define PORTFEL_GOTOWKI_DOMYSLNE 50.0 /* gotowka w portfelu do wrzucania */
+#define PORTFEL_GOTOWKI_DOMYSLNE 50.0 
 #define PLIK_STANU "automat_stan.dat"
 
 enum {
@@ -19,7 +19,7 @@ enum {
 	CMD_PICKUP = 7,
 	CMD_CARD_TOPUP = 8,
 	CMD_RESTOCK_FILL = 9,
-	CMD_PORTFEL_TOPUP = 10, /* doladowanie portfela gotowki */
+	CMD_PORTFEL_TOPUP = 10, 
 };
 
 typedef struct {
@@ -29,8 +29,8 @@ typedef struct {
 } ProduktInfo;
 
 typedef struct {
-	double saldo_pln; /* gotowka juz wrzucona do automatu */
-	double portfel_gotowki_pln; /* portfel: ile mozesz jeszcze wrzucic */
+	double saldo_pln; 
+	double portfel_gotowki_pln; 
 	double saldo_karty_pln;
 	int oczekuje_odbioru;
 	ProduktInfo produkty[PRODUKTOW];

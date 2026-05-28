@@ -29,6 +29,7 @@ static int wyslij(int fd_w, int fd_r, const AutomatReq *req, AutomatResp *resp)
 
 static void ramka(int y, int x, int h, int w)
 {
+	color_set(5, NULL);
 	mvaddch(y, x, ACS_ULCORNER);
 	mvaddch(y, x + w - 1, ACS_URCORNER);
 	mvaddch(y + h - 1, x, ACS_LLCORNER);
@@ -37,6 +38,7 @@ static void ramka(int y, int x, int h, int w)
 	mvhline(y + h - 1, x + 1, ACS_HLINE, w - 2);
 	mvvline(y + 1, x, ACS_VLINE, h - 2);
 	mvvline(y + 1, x + w - 1, ACS_VLINE, h - 2);
+	color_set(2, NULL);
 }
 
 static void wypisz_komunikat(int y, int x, int szer_box, const char *tekst,
@@ -53,6 +55,27 @@ static void wypisz_komunikat(int y, int x, int szer_box, const char *tekst,
 	else
 		mvprintw(y, x + 2, "(czekam na akcje...)");
 	color_set(2, NULL);
+}
+
+static void pasek_stanu(int y, int x, int stan, int max_stan)
+{
+	int szer = 8;
+	if (max_stan <= 0)
+		max_stan = 1;
+	if (stan < 0)
+		stan = 0;
+	if (stan > max_stan)
+		stan = max_stan;
+
+	int pelne = (stan * szer + max_stan - 1) / max_stan;
+	mvaddch(y, x, '[');
+	for (int i = 0; i < szer; i++) {
+		if (i < pelne)
+			mvaddch(y, x + 1 + i, ACS_CKBOARD);
+		else
+			mvaddch(y, x + 1 + i, '.');
+	}
+	mvaddch(y, x + 1 + szer, ']');
 }
 
 static void rysuj_panel(const AutomatResp *resp, int wybor, pid_t pid_aut,
@@ -114,6 +137,7 @@ static void rysuj_panel(const AutomatResp *resp, int wybor, pid_t pid_aut,
 
 		mvprintw(y, box_x + 2, "[%d] %-22s %5.2f zl  %2d/%d",
 			 nr, n->nazwa, n->cena_pln, n->stan, MAX_STAN_MAG);
+		pasek_stanu(y, box_x + 44, n->stan, MAX_STAN_MAG);
 
 		if (slot_odbioru)
 			addstr("  <<ODBIOR>>");
@@ -178,7 +202,8 @@ int klient_run(int fd_do_automatu, int fd_od_automatu, pid_t pid_automatu)
 		init_pair(1, COLOR_CYAN, -1);
 		init_pair(2, COLOR_WHITE, -1);
 		init_pair(3, COLOR_GREEN, -1);
-		init_pair(4, COLOR_RED, -1);
+		init_pair(4, COLOR_MAGENTA, -1);
+		init_pair(5, COLOR_BLUE, -1); 
 	}
 
 	signal(SIGINT, obsluga_sigint);
