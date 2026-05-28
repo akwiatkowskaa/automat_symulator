@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define STAN_MAGIC 0x31544D33u /* 'ATM3' — portfel gotowki */
+#define STAN_MAGIC 0x31544D33u 
 
 typedef struct {
 	unsigned magic;
