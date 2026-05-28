@@ -152,7 +152,7 @@ static void rysuj_panel(const AutomatResp *resp, int wybor, pid_t pid_aut,
 			 " Enter / o = odbior  |  q = wyjscie (stan sie zapisze) ");
 	} else {
 		mvprintw(wys - 3, 2,
-			 " z/x/v/c - wrzut z portfela | Enter/k - kup | p - karta | r - reszta do portfela | l/g - doladuj ");
+			 " z/x/c/v - wrzut z portfela | Enter/k - kup | p - karta | r - reszta do portfela | l/g - doladuj ");
 		mvprintw(wys - 2, 2,
 			 " u/U - uzupelnij slot | q - wyjscie | 1-10 wybor ");
 	}
@@ -192,7 +192,7 @@ int klient_run(int fd_do_automatu, int fd_od_automatu, pid_t pid_automatu)
 	char bufor_portfel[32] = "";
 	resp.ok = 1;
 	snprintf(resp.text, sizeof(resp.text),
-		 "Portfel %.0f zl do wrzucenia. z/x/v/c = wrzut z portfela.",
+		 "Portfel %.0f zl do wrzucenia. z/x/c/v = wrzut z portfela.",
 		 PORTFEL_GOTOWKI_DOMYSLNE);
 
 	for (;;) {
@@ -403,10 +403,8 @@ int klient_run(int fd_do_automatu, int fd_od_automatu, pid_t pid_automatu)
 			continue;
 		}
 		if (ch == 'v' || ch == 'V') {
-			req.cmd = CMD_COIN;
-			req.kwota_pln = 5.0;
-			if (wyslij(fd_do_automatu, fd_od_automatu, &req, &resp) != 0)
-				break;
+			tryb_kwota = 1;
+			bufor_kwoty[0] = '\0';
 			continue;
 		}
 		if (ch == 'r' || ch == 'R') {
@@ -430,8 +428,10 @@ int klient_run(int fd_do_automatu, int fd_od_automatu, pid_t pid_automatu)
 			continue;
 		}
 		if (ch == 'c' || ch == 'C') {
-			tryb_kwota = 1;
-			bufor_kwoty[0] = '\0';
+			req.cmd = CMD_COIN;
+			req.kwota_pln = 5.0;
+			if (wyslij(fd_do_automatu, fd_od_automatu, &req, &resp) != 0)
+				break;
 			continue;
 		}
 		snprintf(resp.text, sizeof(resp.text),
