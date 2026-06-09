@@ -116,7 +116,7 @@ static int blokuje_przez_odbior(int oczekuje, AutomatResp *resp, const Produkt *
 		return 0;
 	resp->ok = 0;
 	snprintf(resp->text, sizeof(resp->text),
-		 "Odbierz produkt ze slotu [%d] (%s) — Enter.",
+		 "odbierz produkt ze slotu [%d] (%s) — Enter",
 		 oczekuje, mag[oczekuje - 1].nazwa);
 	uzupelnij_stan_w_odpowiedzi(resp, mag, saldo, portfel, saldo_karty,
 				    oczekuje);
@@ -128,21 +128,21 @@ static int wykonaj_zakup(Produkt *mag, int nr, double *saldo, double *saldo_kart
 {
 	if (nr < 1 || nr > PRODUKTOW) {
 		resp->ok = 0;
-		snprintf(resp->text, sizeof(resp->text), "Zly numer (1–%d).",
+		snprintf(resp->text, sizeof(resp->text), "zly numer (1–%d).",
 			 PRODUKTOW);
 		return 0;
 	}
 	int i = nr - 1;
 	if (mag[i].stan <= 0) {
 		resp->ok = 0;
-		snprintf(resp->text, sizeof(resp->text), "Brak: %s.", mag[i].nazwa);
+		snprintf(resp->text, sizeof(resp->text), "brak: %s.", mag[i].nazwa);
 		return 0;
 	}
 	if (karta) {
 		if (*saldo_karty + 1e-9 < mag[i].cena_pln) {
 			resp->ok = 0;
 			snprintf(resp->text, sizeof(resp->text),
-				 "Za malo na karcie (%.2f zl, masz %.2f zl).",
+				 "za malo na karcie (%.2f zl, masz %.2f zl",
 				 mag[i].cena_pln, *saldo_karty);
 			return 0;
 		}
@@ -150,7 +150,7 @@ static int wykonaj_zakup(Produkt *mag, int nr, double *saldo, double *saldo_kart
 	} else if (*saldo + 1e-9 < mag[i].cena_pln) {
 		resp->ok = 0;
 		snprintf(resp->text, sizeof(resp->text),
-			 "Za malo w automacie (%.2f zl, masz %.2f zl).",
+			 "za malo w automacie (%.2f zl, masz %.2f zl)",
 			 mag[i].cena_pln, *saldo);
 		return 0;
 	} else {
@@ -162,11 +162,11 @@ static int wykonaj_zakup(Produkt *mag, int nr, double *saldo, double *saldo_kart
 	resp->ok = 1;
 	if (karta)
 		snprintf(resp->text, sizeof(resp->text),
-			 "Karta: -%.2f zl. Odbierz [%d] %s. Na karcie: %.2f zl.",
+			 "karta: -%.2f zl - odbierz [%d] %s, na karcie: %.2f zl",
 			 mag[i].cena_pln, nr, mag[i].nazwa, *saldo_karty);
 	else
 		snprintf(resp->text, sizeof(resp->text),
-			 "Gotowka: -%.2f zl. Odbierz [%d] %s. W automacie: %.2f zl.",
+			 "gotowka: -%.2f zl - odbierz [%d] %s, w automacie: %.2f zl",
 			 mag[i].cena_pln, nr, mag[i].nazwa, *saldo);
 	return 1;
 }
@@ -197,14 +197,14 @@ static int uzupelnij_slot(Produkt *mag, int nr, AutomatResp *resp)
 {
 	if (nr < 1 || nr > PRODUKTOW) {
 		resp->ok = 0;
-		snprintf(resp->text, sizeof(resp->text), "Zly slot.");
+		snprintf(resp->text, sizeof(resp->text), "zly slot");
 		return 0;
 	}
 	int i = nr - 1;
 	mag[i].stan = MAX_STAN_MAG;
 	resp->ok = 1;
 	snprintf(resp->text, sizeof(resp->text),
-		 "Uzupelniono [%d] %s do %d szt.", nr, mag[i].nazwa,
+		 "uzupelniono [%d] %s do %d szt.", nr, mag[i].nazwa,
 		 MAX_STAN_MAG);
 	return 1;
 }
@@ -237,7 +237,7 @@ void automat_run(int fd_req, int fd_resp)
 		case CMD_QUIT:
 			resp.ok = 1;
 			snprintf(resp.text, sizeof(resp.text),
-				 "Zapisano stan. Do widzenia.");
+				 "zapisano stan, do widzenia!!");
 			zapisz_stan(saldo_pln, portfel_gotowki_pln, saldo_karty_pln,
 				    magazyn);
 			uzupelnij_stan_w_odpowiedzi(&resp, magazyn, saldo_pln,
@@ -251,11 +251,11 @@ void automat_run(int fd_req, int fd_resp)
 			resp.ok = 1;
 			if (oczekuje_odbioru > 0)
 				snprintf(resp.text, sizeof(resp.text),
-					 "Odbierz produkt ze slotu [%d].",
+					 "odbierz produkt ze slotu [%d].",
 					 oczekuje_odbioru);
 			else
 				snprintf(resp.text, sizeof(resp.text),
-					 "Portfel: %.2f zl do wrzucenia.",
+					 "portfel: %.2f zl do wrzucenia",
 					 portfel_gotowki_pln);
 			uzupelnij_stan_w_odpowiedzi(&resp, magazyn, saldo_pln,
 						    portfel_gotowki_pln,
@@ -267,12 +267,12 @@ void automat_run(int fd_req, int fd_resp)
 			if (oczekuje_odbioru <= 0) {
 				resp.ok = 0;
 				snprintf(resp.text, sizeof(resp.text),
-					 "Brak produktu do odebrania.");
+					 "brak produktu do odebrania.");
 			} else {
 				int slot = oczekuje_odbioru;
 				resp.ok = 1;
 				snprintf(resp.text, sizeof(resp.text),
-					 "Odebrano ze slotu [%d]. Milego dnia!",
+					 "odebrano ze slotu [%d]!!",
 					 slot);
 				oczekuje_odbioru = 0;
 			}
@@ -292,12 +292,12 @@ void automat_run(int fd_req, int fd_resp)
 			if (req.kwota_pln <= 0.0 || req.kwota_pln > 500.0) {
 				resp.ok = 0;
 				snprintf(resp.text, sizeof(resp.text),
-					 "Doladowanie: 0.01–500 zl.");
+					 "doladowanie: 0.01–500 zl");
 			} else {
 				saldo_karty_pln += req.kwota_pln;
 				resp.ok = 1;
 				snprintf(resp.text, sizeof(resp.text),
-					 "Karta +%.2f zl. Saldo karty: %.2f zl.",
+					 "karta +%.2f zl, saldo karty: %.2f zl",
 					 req.kwota_pln, saldo_karty_pln);
 			}
 			uzupelnij_stan_w_odpowiedzi(&resp, magazyn, saldo_pln,
@@ -316,12 +316,12 @@ void automat_run(int fd_req, int fd_resp)
 			if (req.kwota_pln <= 0.0 || req.kwota_pln > 500.0) {
 				resp.ok = 0;
 				snprintf(resp.text, sizeof(resp.text),
-					 "Doladowanie: 0.01–500 zl.");
+					 "doladowanie: 0.01–500 zl");
 			} else {
 				portfel_gotowki_pln += req.kwota_pln;
 				resp.ok = 1;
 				snprintf(resp.text, sizeof(resp.text),
-					 "Portfel +%.2f zl. W portfelu: %.2f zl.",
+					 "portfel +%.2f zl, w portfelu: %.2f zl",
 					 req.kwota_pln, portfel_gotowki_pln);
 			}
 			uzupelnij_stan_w_odpowiedzi(&resp, magazyn, saldo_pln,
@@ -340,19 +340,19 @@ void automat_run(int fd_req, int fd_resp)
 			if (req.kwota_pln <= 0.0 || req.kwota_pln > 100.0) {
 				resp.ok = 0;
 				snprintf(resp.text, sizeof(resp.text),
-					 "Kwota poza zakresem (0.01–100 zl).");
+					 "kwota poza zakresem (0.01–100 zl)");
 			} else if (req.kwota_pln > portfel_gotowki_pln + 1e-9) {
 				resp.ok = 0;
 				snprintf(resp.text, sizeof(resp.text),
-					 "W portfelu masz tylko %.2f zl.",
+					 "w portfelu masz tylko %.2f zl",
 					 portfel_gotowki_pln);
 			} else {
 				portfel_gotowki_pln -= req.kwota_pln;
 				saldo_pln += req.kwota_pln;
 				resp.ok = 1;
 				snprintf(resp.text, sizeof(resp.text),
-					 "Wrzucono %.2f zl z portfela. W automacie: "
-					 "%.2f zl | portfel: %.2f zl.",
+					 "wrzucono %.2f zl z portfela, w automacie: "
+					 "%.2f zl / portfel: %.2f zl",
 					 req.kwota_pln, saldo_pln,
 					 portfel_gotowki_pln);
 			}
@@ -372,15 +372,15 @@ void automat_run(int fd_req, int fd_resp)
 			if (saldo_pln < 1e-9) {
 				resp.ok = 0;
 				snprintf(resp.text, sizeof(resp.text),
-					 "Brak reszty w automacie.");
+					 "brak reszty w automacie");
 			} else {
 				double wydano = saldo_pln;
 				portfel_gotowki_pln += saldo_pln;
 				saldo_pln = 0.0;
 				resp.ok = 1;
 				snprintf(resp.text, sizeof(resp.text),
-					 "Reszta %.2f zl -> portfel. Portfel: %.2f "
-					 "zl.",
+					 "reszta %.2f zl do portfela, portfel: %.2f "
+					 "zl",
 					 wydano, portfel_gotowki_pln);
 			}
 			uzupelnij_stan_w_odpowiedzi(&resp, magazyn, saldo_pln,
@@ -445,7 +445,7 @@ void automat_run(int fd_req, int fd_resp)
 
 		default:
 			resp.ok = 0;
-			snprintf(resp.text, sizeof(resp.text), "Nieznana komenda.");
+			snprintf(resp.text, sizeof(resp.text), "nieznana komenda");
 			uzupelnij_stan_w_odpowiedzi(&resp, magazyn, saldo_pln,
 						    portfel_gotowki_pln,
 						    saldo_karty_pln,

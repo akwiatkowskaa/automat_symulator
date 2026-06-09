@@ -40,9 +40,9 @@ int main(void)
 	(void)waitpid(pid, NULL, 0);
 
 	if (kod != 0) {
-		fprintf(stderr, "Blad klienta lub automatu.\n");
+		fprintf(stderr, "blad klienta lub automatu\n");
 		return 1;
 	}
-	puts("Do widzenia.");
+	puts("do widzenia!!");
 	return 0;
 }

@@ -92,11 +92,11 @@ static void rysuj_panel(const AutomatResp *resp, int wybor, pid_t pid_aut,
 	color_set(1, NULL);
 	mvprintw(0, 2, " AUTOMAT: NAPOJE + PRZEKASKI ");
 	color_set(2, NULL);
-	mvprintw(1, 2, " Klient PID %-6d | Automat PID %-6d | zapis: %s ",
+	mvprintw(1, 2, "[klient PID %-6d | automat PID %-6d | zapis: %s]",
 		 (int)getpid(), (int)pid_aut, PLIK_STANU);
 
 	attron(A_BOLD);
-	mvprintw(3, 2, " W automacie: %5.2f zl | Portfel: %5.2f zl | Karta: %6.2f zl ",
+	mvprintw(3, 2, " w automacie: %5.2f zl | portfel: %5.2f zl | karta: %6.2f zl ",
 		 s->saldo_pln, s->portfel_gotowki_pln, s->saldo_karty_pln);
 	attroff(A_BOLD);
 
@@ -119,7 +119,7 @@ static void rysuj_panel(const AutomatResp *resp, int wybor, pid_t pid_aut,
 
 	ramka(6, box_x, PRODUKTOW + 2, box_w);
 	mvprintw(6, box_x + 2,
-		 " 1-5 NAPOJE | 6-10 PRZEKASKI (max %d szt./slot) ", MAX_STAN_MAG);
+		 "AUTOMAT: 1-5 NAPOJE / 6-10 PRZEKASKI (max %d szt./slot) ", MAX_STAN_MAG);
 
 	for (int i = 0; i < PRODUKTOW; i++) {
 		int y = 7 + i;
@@ -156,27 +156,27 @@ static void rysuj_panel(const AutomatResp *resp, int wybor, pid_t pid_aut,
 
 	int msg_y = 7 + PRODUKTOW + 1;
 	ramka(msg_y, box_x, 5, box_w);
-	mvprintw(msg_y, box_x + 2, " KOMUNIKAT ");
+	mvprintw(msg_y, box_x + 2, " KOMUNIKATY ");
 	wypisz_komunikat(msg_y + 2, box_x, box_w, resp->text, resp->ok);
 
 	if (tryb_portfel) {
 		mvprintw(wys - 2, 2,
-			 " Doladuj portfel gotowki (zl) + Enter | Esc = anuluj: [%s]",
+			 " doladuj portfel gotowki (zl) + Enter | Esc = anuluj: [%s]",
 			 bufor_portfel);
 	} else if (tryb_doladowanie) {
 		mvprintw(wys - 2, 2,
-			 " Doladuj karte (zl) + Enter | Esc = anuluj: [%s]",
+			 " doladuj karte (zl) + Enter | Esc = anuluj: [%s]",
 			 bufor_doladowanie);
 	} else if (tryb_wlasna_kwota) {
 		mvprintw(wys - 2, 2,
-			 " Kwota gotowki (zl) + Enter | Esc = anuluj: [%s]",
+			 " kwota gotowki (zl) + Enter | Esc = anuluj: [%s]",
 			 bufor_kwoty);
 	} else if (odbior > 0) {
 		mvprintw(wys - 2, 2,
 			 " Enter / o = odbior  |  q = wyjscie (stan sie zapisze) ");
 	} else {
 		mvprintw(wys - 3, 2,
-			 " z/x/c/v - wrzut z portfela | Enter/k - kup | p - karta | r - reszta do portfela | l/g - doladuj ");
+			 " z/x/c/v - gotowka z portfela [1/2/5/inna] | Enter/k - kup | p - karta | r - reszta do portfela | l/g - doladuj ");
 		mvprintw(wys - 2, 2,
 			 " u/U - uzupelnij slot | q - wyjscie | 1-10 wybor ");
 	}
@@ -217,8 +217,7 @@ int klient_run(int fd_do_automatu, int fd_od_automatu, pid_t pid_automatu)
 	char bufor_portfel[32] = "";
 	resp.ok = 1;
 	snprintf(resp.text, sizeof(resp.text),
-		 "Portfel %.0f zl do wrzucenia. z/x/c/v = wrzut z portfela.",
-		 PORTFEL_GOTOWKI_DOMYSLNE);
+		 "ROZPOCZNIJ ZAKUPY W AUTOMACIE");
 
 	for (;;) {
 		if (przerwano) {
@@ -313,7 +312,7 @@ int klient_run(int fd_do_automatu, int fd_od_automatu, pid_t pid_automatu)
 				tryb_kwota = 0;
 				bufor_kwoty[0] = '\0';
 				snprintf(resp.text, sizeof(resp.text),
-					 "Anulowano wrzut.");
+					 "anulowano wrzut.");
 				resp.ok = 1;
 				continue;
 			}
@@ -362,7 +361,7 @@ int klient_run(int fd_do_automatu, int fd_od_automatu, pid_t pid_automatu)
 				break;
 			}
 			snprintf(resp.text, sizeof(resp.text),
-				 "Najpierw odbierz produkt (Enter).");
+				 "najpierw odbierz produkt (Enter).");
 			resp.ok = 0;
 			continue;
 		}
@@ -460,7 +459,7 @@ int klient_run(int fd_do_automatu, int fd_od_automatu, pid_t pid_automatu)
 			continue;
 		}
 		snprintf(resp.text, sizeof(resp.text),
-			 "Nieznany klawisz — pomoc na dole ekranu.");
+			 "nieznany klawisz — pomoc na dole ekranu");
 		resp.ok = 0;
 	}
 

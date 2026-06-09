@@ -21,7 +21,7 @@ Procesy komunikuja sie przez dwa potoki:
 - klient -> automat (zadania)
 - automat -> klient (odpowiedzi)
 
-## Konstrukcje z zajec wykorzystane w projekcie
+## Konstrukcje z zajec w projekcie
 
 1. **Procesy (`fork`)**
    - rozdzielenie interfejsu i logiki na osobne procesy

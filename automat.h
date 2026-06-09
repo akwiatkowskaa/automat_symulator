@@ -4,7 +4,7 @@
 #define PRODUKTOW 10
 #define SLOTOW_NAPOJE 5
 #define MAX_STAN_MAG 8
-#define SALDO_KARTY_DOMYSLNE 200.0
+#define SALDO_KARTY_DOMYSLNE 60.0
 #define PORTFEL_GOTOWKI_DOMYSLNE 50.0 
 #define PLIK_STANU "automat_stan.dat"
 
